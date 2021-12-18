@@ -13,14 +13,18 @@ class Search extends React.Component {
         }
 
         this.searchedText = "";
+        this.page = 0;
+        this.totalPages = 0
     }
 
     _loadFilms() {
         this.setState({ isLoading: true });
         if (this.searchedText.length > 0) {
-            getFilmsWithSearchedText(this.searchedText).then(data => {
+            getFilmsWithSearchedText(this.searchedText, this.page + 1).then(data => {
+                this.page = data.page;
+                this.totalPages = data.total_pages;
                 this.setState({
-                    films: data.results,
+                    films: [...this.state.films, ...data.results],
                     isLoading: false
                 });
             });
@@ -41,20 +45,37 @@ class Search extends React.Component {
         }
     }
 
+    _searchFilms() {
+        this.page = 0;
+        this.totalPages = 0;
+        this.setState({
+            films: []
+        }, () => {
+            console.log('Page: ' + this.page + ' / Total pages: ' + this.totalPages + ' / Nb films: ' + this.state.films.length)
+            this._loadFilms();
+        })
+    }
+
     render() {
         return (
 
             <View style={styles.main_container}>
                 <TextInput
                     onChangeText={(text) => this._searchTextInputChange(text)}
-                    onSubmitEditing={() => this._loadFilms()}
+                    onSubmitEditing={() => this._searchFilms()}
                     style={styles.textInput}
                     placeholder='Titre du film' />
-                <Button style={styles.button} title="Rechercher" onPress={() => { this._loadFilms() }}></Button>
+                <Button style={styles.button} title="Rechercher" onPress={() => { this._searchFilms() }}></Button>
                 <FlatList
                     data={this.state.films}
                     keyExtractor={(item) => item.id}
                     renderItem={({ item }) => <FilmItem film={item} />}
+                    onEndReachedThreshold={0.5}
+                    onEndReached={() => {
+                        if (this.page < this.totalPages) {
+                            this._loadFilms();
+                        }
+                    }}
                 />
                 { this._displayLoading()}
             </View>
